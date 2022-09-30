@@ -33,6 +33,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="MathPrimitivesLibrary">
+      <HintPath>..\..\MPL\MathPrimitivesLibrary\MathPrimitivesLibrary\bin\Release\net48\MathPrimitivesLibrary.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -48,6 +51,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Lab1\" />
+    <Folder Include="Lab2\" />
+    <Folder Include="Lab3\" />
+    <Folder Include="Lab4\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

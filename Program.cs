@@ -1,15 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using MathPrimitivesLibrary;
 
 namespace AFLETUNOV_LR1
 {
-    internal class Program
+  internal class Program
+  {
+    static void Main(string[] args)
     {
-        static void Main(string[] args)
-        {
-        }
+
     }
+  }
 }
+
