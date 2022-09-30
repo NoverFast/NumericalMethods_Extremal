@@ -1,4 +1,6 @@
-﻿using MathPrimitivesLibrary;
+﻿using MathPrimitiveLibrary;
+using AFLETUNOV_LR1.Lab1;
+using System;
 
 namespace AFLETUNOV_LR1
 {
@@ -6,7 +8,8 @@ namespace AFLETUNOV_LR1
   {
     static void Main(string[] args)
     {
-
+      ApproximatedSolution aprx = new ApproximatedSolution(10);
+      Console.ReadLine();
     }
   }
 }
