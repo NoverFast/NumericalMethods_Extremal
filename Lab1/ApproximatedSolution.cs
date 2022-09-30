@@ -10,24 +10,55 @@ namespace AFLETUNOV_LR1.Lab1
     public Vector ExactSolution { get; private set; }
     public Vector FreeCoefs { get; private set; }
 
-    // Данные расширенной матрицы.
+    // Данные расширенной матрицы и столбца свободных членов
     public Matrix ExpandedMatrix { get; private set; }
-    public Matrix ExpandedCoefs { get; private set; }
+    public Vector ExpandedCoefs { get; private set; }
 
-    // Данные расширенной матрицы с добавленным шумом
+    // Данные расширенной матрицы и столбца свободных членов с добавленным шумом
     public Matrix ApproximatedMatrix { get; private set; }
     public Matrix ApproximatedCoefs { get; private set; }
 
     public Random r { get; private set; }
 
+    // в качестве начального приближения метода ньютона для решения СНАУ можно использовать точное решение
     public ApproximatedSolution(int size)
+    {
+      InitializeData(size); // Инициализируем все начальные данные, с которыми впоследствие будем работать
+    }
+
+    private void InitializeData(int size)
     {
       SourceMatrix = GenerateRandomMatrix(size);
       ExactSolution = GenerateRandomSolution(size);
       FreeCoefs = SourceMatrix * ExactSolution;
-      ExpandedMatrix = new Matrix(size + 2, size);
+      ExpandedMatrix = GenerateExpandedMatrix(SourceMatrix);
+      ExpandedCoefs = GenerateExpandedCoefs(FreeCoefs);
+      ApproximatedMatrix = AddNoise(ExpandedMatrix);
     }
 
+    private Matrix AddNoise(Matrix m)
+    {
+      Random r = new Random();
+      Matrix noiseMatrix = new Matrix(m);
+      for (int i =0; i < noiseMatrix.Rows; i++)
+      {
+        for (int j =0; j < noiseMatrix.Coloumns; j++)
+        {
+          noiseMatrix[i, j] *= (1 + ((r.NextDouble() - 0.5) * 2) * 0.001);
+        }
+      }
+      return noiseMatrix;
+    }
+    private Vector AddNoise(Vector v)
+    {
+      Random r = new Random();
+      Vector noiseVector = new Vector(v);
+      for (int i = 0; i < noiseVector.Size; i++)
+      {
+        noiseVector[i] *= (1 + ((r.NextDouble() - 0.5) * 2) * 0.01);
+      }
+      return noiseVector;
+    }
     private Matrix GenerateRandomMatrix(int size)
     {
       Random r = new Random();
@@ -41,7 +72,6 @@ namespace AFLETUNOV_LR1.Lab1
           m[i, j] = randomValue;
         }
       }
-      m.ShowMatrix();
       return m;
     }
     private Vector GenerateRandomSolution(int size)
@@ -52,7 +82,6 @@ namespace AFLETUNOV_LR1.Lab1
       {
         v[i] = (r.NextDouble() - 0.5) * 2;
       }
-      v.ShowVector();
       return v;
     }
 
