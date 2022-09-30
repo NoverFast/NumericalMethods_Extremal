@@ -34,6 +34,7 @@ namespace AFLETUNOV_LR1.Lab1
       ExpandedMatrix = GenerateExpandedMatrix(SourceMatrix);
       ExpandedCoefs = GenerateExpandedCoefs(FreeCoefs);
       ApproximatedMatrix = AddNoise(ExpandedMatrix);
+      //test
     }
 
     private Matrix AddNoise(Matrix m)
