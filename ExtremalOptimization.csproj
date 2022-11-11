@@ -33,9 +33,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="MathPrimitivesLibrary, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\MPL\MathPrimitivesLibrary\MathPrimitivesLibrary\bin\Release\net48\MathPrimitivesLibrary.dll</HintPath>
+    <Reference Include="MathPrimitivesLibrary">
+      <HintPath>..\MathPrimitivesLibrary\MathPrimitivesLibrary\bin\Debug\net48\MathPrimitivesLibrary.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -48,16 +47,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Lab1\ApproximatedSolution.cs" />
+    <Compile Include="Lab2\SoutionBuilder.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Lab2\" />
-    <Folder Include="Lab3\" />
-    <Folder Include="Lab4\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

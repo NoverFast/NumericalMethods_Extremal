@@ -1,7 +1,7 @@
 ﻿using System;
-using MathPrimitiveLibrary;
+using MathPrimitivesLibrary;
 
-namespace AFLETUNOV_LR1.Lab1
+namespace ExtremalOptimization.Lab1
 {
   public class ApproximatedSolution
   {
