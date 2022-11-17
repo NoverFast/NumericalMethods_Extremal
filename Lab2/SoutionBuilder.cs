@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MathPrimitivesLibrary;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,7 +7,13 @@ using System.Threading.Tasks;
 
 namespace ExtremalOptimization.Lab2
 {
-  internal class SoutionBuilder
+  // Оптимизация функционала методом скорейшего спуска. 
+  public class SoutionBuilder
   {
+    public Vector initialData { get; set;}
+    public SoutionBuilder(Vector initialData)
+    {
+      this.initialData = initialData;
+    }
   }
 }
