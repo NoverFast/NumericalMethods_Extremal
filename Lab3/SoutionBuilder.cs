@@ -5,15 +5,18 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ExtremalOptimization.Lab2
+namespace ExtremalOptimization.Lab3
 {
   // Оптимизация функционала методом скорейшего спуска. 
   public class SoutionBuilder
   {
-    public Vector initialData { get; set;}
-    public SoutionBuilder(Vector initialData)
+    public Matrix BuildMatrixA(double t)
     {
-      this.initialData = initialData;
+      return new Matrix(new double[,] 
+      { 
+        { Math.Cos(t), t },
+        { 1.0 / (1.0 + t), Math.Sin(t) }
+      });
     }
   }
 }

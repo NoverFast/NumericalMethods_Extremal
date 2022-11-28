@@ -1,0 +1,135 @@
+﻿using System;
+using System.Collections.Generic;
+using MathPrimitivesLibrary;
+
+namespace ExtremalOptimization.Lab2
+{
+  enum Point
+  {
+    x = 0,
+    y = 1
+  }
+  public class ApproximatedSolution
+  {
+    public int NumberOfSteps { get; set; }
+    public double StepLength { get; set; }
+    public Vector FinalPoint { get; set; }
+    
+    private Matrix u { get; set; }
+    private Matrix x { get; set; }
+    private Matrix psi { get; set; }
+    private Matrix diffJ { get; set; }
+    private Matrix uJ { get; set; }
+    private Matrix xJ { get; set; }
+
+    // A = (cos(t), t)
+    //     (1/(1+t), sin(t))
+
+    // B = (1-e^(-t), 0)
+    //     (0, 1 + sin(2t))
+    public ApproximatedSolution(int steps, double stepLength, Vector finalPoint)
+    {
+      // + 1 с учётом захвата границ. 
+      NumberOfSteps = steps + 1;
+      StepLength = stepLength;
+      FinalPoint = finalPoint;
+      // Управление, каждый элемент - некоторая точка плоскости.
+      u = FillInitialApproximation();
+
+      x = new Matrix(NumberOfSteps, 2);
+      psi = new Matrix(NumberOfSteps, 2);
+      diffJ = new Matrix(NumberOfSteps, 2);
+      uJ = new Matrix(NumberOfSteps, 2);
+      xJ = new Matrix(NumberOfSteps, 2);
+
+    }
+
+    private Matrix FillInitialApproximation()
+    {
+      Matrix u0 = new Matrix(NumberOfSteps, 2);
+      for (int i = 0; i < NumberOfSteps; i++)
+      {
+        double t = i * StepLength;
+        u0[i, (int)Point.x] = 10 * t;
+        u0[i, (int)Point.y] = 20 * t;
+      }
+      return u0;
+    }
+
+    private Matrix ForwardSolve(Matrix m)
+    {
+      Matrix x = new Matrix(NumberOfSteps, 2);
+      x[0, 0] = 0;
+      x[1, 0] = 0;
+      for (int i =1; i < NumberOfSteps; i++)
+      {
+        double t = i * StepLength;
+        x[i, (int)Point.x] = x[i - 1, (int)Point.x] + StepLength * (Math.Cos(t) * x[i - 1, (int)Point.x] +
+          t * x[i - 1, (int)Point.y] + m[i, (int)Point.x] * (1 - Math.Exp(-t)));
+        x[i, (int)Point.y] = x[i - 1, (int)Point.y] + StepLength * (Math.Sin(t) * x[i - 1, (int)Point.y] +
+           x[i - 1, (int)Point.x] / (t + 1) + m[i, (int)Point.y] * (1 + Math.Sin(2 * t)));
+      }
+      return x;
+    }
+
+    private Matrix BackwardSolve()
+    {
+      Matrix psi = new Matrix(NumberOfSteps, 2);
+      psi[NumberOfSteps - 1, (int)Point.x] = 2 * (x[NumberOfSteps - 1, (int)Point.x] - FinalPoint[(int)Point.x]);
+      psi[NumberOfSteps - 1, (int)Point.y] = 2 * (x[NumberOfSteps - 1, (int)Point.y] - FinalPoint[(int)Point.y]);
+
+      for (int i = NumberOfSteps - 2; i >= 0; i--)
+      {
+        double t = i * StepLength;
+        psi[i, (int)Point.x] = psi[i + 1, (int)Point.x] - StepLength * (Math.Cos(t) * psi[i + 1, (int)Point.x]) +
+          +psi[i + 1, (int)Point.y] / (t + 1);
+        psi[i, (int)Point.y] = psi[i + 1, (int)Point.y] - StepLength * (Math.Sin(t) * psi[i + 1, (int)Point.y]) +
+          + t * psi[i + 1, (int)Point.x];
+      }
+      return psi;
+    }
+
+    private double Trapezoid()
+    {
+      double sum = 0;
+      sum += Math.Pow(diffJ[0, (int)Point.x] / 2, 2) + Math.Pow(diffJ[0, (int)Point.y] / 2, 2) +
+        Math.Pow(diffJ[NumberOfSteps - 1, (int)Point.x] / 2, 2) + Math.Pow(diffJ[NumberOfSteps - 1, (int)Point.y] / 2, 2);
+      for (int i = 1; i < NumberOfSteps - 1; i++)
+      {
+        sum += Math.Pow(diffJ[i, (int)Point.x], 2) + Math.Pow(diffJ[i, (int)Point.y], 2);
+      }
+      return sum * StepLength;
+    }
+    public void Solve()
+    {
+      double norm = Math.Sqrt(Math.Pow(x[NumberOfSteps - 1, (int)Point.x] - FinalPoint[(int)Point.x], 2) +
+        Math.Pow(x[NumberOfSteps - 1, (int)Point.y] - FinalPoint[(int)Point.y], 2));
+      Console.WriteLine(norm);
+      while (norm > 1e-3)
+      {
+        Console.WriteLine("Norm: {0}", norm);
+        x = ForwardSolve(u);
+        psi = BackwardSolve();
+        for (int i =0; i < NumberOfSteps; i++)
+        {
+          double t = i * StepLength;
+          diffJ[i, (int)Point.x] = psi[i, (int)Point.x] * (1 - Math.Exp(-t));
+          diffJ[i, (int)Point.y] = psi[i, (int)Point.y] * (1 + Math.Sin(2 * t));
+          uJ[i, (int)Point.x] = u[i, (int)Point.x] - diffJ[i, (int)Point.x];
+          uJ[i, (int)Point.y] = u[i, (int)Point.y] - diffJ[i, (int)Point.y];
+        }
+
+        xJ = ForwardSolve(uJ);
+        double trapQuadrature = Trapezoid();
+        double dNorm = Math.Pow(xJ[NumberOfSteps - 1, (int)Point.x] - x[NumberOfSteps - 1, (int)Point.x], 2) +
+          Math.Pow(xJ[NumberOfSteps - 1, (int)Point.y] - x[NumberOfSteps - 1, (int)Point.y], 2);
+        double alpha = 1.0 / 2.0 * (trapQuadrature / dNorm);
+        for (int i =0; i < NumberOfSteps; i++)
+        {
+          u[i, (int)Point.x] -= alpha * diffJ[i, (int)Point.x];
+          u[i, (int)Point.y] -= alpha * diffJ[i, (int)Point.y];
+        }
+      }
+    }
+  }
+}
