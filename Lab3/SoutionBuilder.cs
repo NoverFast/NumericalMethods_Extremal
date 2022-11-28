@@ -10,6 +10,14 @@ namespace ExtremalOptimization.Lab3
   // Оптимизация функционала методом скорейшего спуска. 
   public class SoutionBuilder
   {
+    public Func<double, double> ManagementFunc { get; set; }
+    public Func<double, double> Phi { get; set; }
+
+    public SoutionBuilder(int stepsX, int stepsY, Func<double, double> initialManagement)
+    {
+
+    }
+
     public Matrix BuildMatrixA(double t)
     {
       return new Matrix(new double[,] 

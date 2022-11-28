@@ -30,7 +30,7 @@ namespace ExtremalOptimization.Lab2
     public ApproximatedSolution(int steps, double stepLength, Vector finalPoint)
     {
       // + 1 с учётом захвата границ. 
-      NumberOfSteps = steps + 1;
+      NumberOfSteps = steps;
       StepLength = stepLength;
       FinalPoint = finalPoint;
       // Управление, каждый элемент - некоторая точка плоскости.
@@ -53,6 +53,7 @@ namespace ExtremalOptimization.Lab2
         u0[i, (int)Point.x] = 10 * t;
         u0[i, (int)Point.y] = 20 * t;
       }
+      //u0.Show();
       return u0;
     }
 
@@ -69,6 +70,7 @@ namespace ExtremalOptimization.Lab2
         x[i, (int)Point.y] = x[i - 1, (int)Point.y] + StepLength * (Math.Sin(t) * x[i - 1, (int)Point.y] +
            x[i - 1, (int)Point.x] / (t + 1) + m[i, (int)Point.y] * (1 + Math.Sin(2 * t)));
       }
+      //x.Show();
       return x;
     }
 
@@ -77,14 +79,13 @@ namespace ExtremalOptimization.Lab2
       Matrix psi = new Matrix(NumberOfSteps, 2);
       psi[NumberOfSteps - 1, (int)Point.x] = 2 * (x[NumberOfSteps - 1, (int)Point.x] - FinalPoint[(int)Point.x]);
       psi[NumberOfSteps - 1, (int)Point.y] = 2 * (x[NumberOfSteps - 1, (int)Point.y] - FinalPoint[(int)Point.y]);
-
       for (int i = NumberOfSteps - 2; i >= 0; i--)
       {
         double t = i * StepLength;
-        psi[i, (int)Point.x] = psi[i + 1, (int)Point.x] - StepLength * (Math.Cos(t) * psi[i + 1, (int)Point.x]) +
-          +psi[i + 1, (int)Point.y] / (t + 1);
-        psi[i, (int)Point.y] = psi[i + 1, (int)Point.y] - StepLength * (Math.Sin(t) * psi[i + 1, (int)Point.y]) +
-          + t * psi[i + 1, (int)Point.x];
+        psi[i, (int)Point.x] = psi[i + 1, (int)Point.x] - StepLength * (Math.Cos(t) * psi[i + 1, (int)Point.x] +
+          + psi[i + 1, (int)Point.y] / (t + 1));
+        psi[i, (int)Point.y] = psi[i + 1, (int)Point.y] - StepLength * (Math.Sin(t) * psi[i + 1, (int)Point.y] +
+          + t * psi[i + 1, (int)Point.x]);
       }
       return psi;
     }
@@ -100,13 +101,14 @@ namespace ExtremalOptimization.Lab2
       }
       return sum * StepLength;
     }
+
     public void Solve()
     {
-      double norm = Math.Sqrt(Math.Pow(x[NumberOfSteps - 1, (int)Point.x] - FinalPoint[(int)Point.x], 2) +
-        Math.Pow(x[NumberOfSteps - 1, (int)Point.y] - FinalPoint[(int)Point.y], 2));
-      Console.WriteLine(norm);
+      double norm = Double.MaxValue; 
       while (norm > 1e-3)
       {
+        norm = Math.Sqrt(Math.Pow(x[NumberOfSteps - 1, (int)Point.x] - FinalPoint[(int)Point.x], 2) +
+        Math.Pow(x[NumberOfSteps - 1, (int)Point.y] - FinalPoint[(int)Point.y], 2)); 
         Console.WriteLine("Norm: {0}", norm);
         x = ForwardSolve(u);
         psi = BackwardSolve();
@@ -118,17 +120,21 @@ namespace ExtremalOptimization.Lab2
           uJ[i, (int)Point.x] = u[i, (int)Point.x] - diffJ[i, (int)Point.x];
           uJ[i, (int)Point.y] = u[i, (int)Point.y] - diffJ[i, (int)Point.y];
         }
-
+        //diffJ.Show();
         xJ = ForwardSolve(uJ);
+        //xJ.Show();
         double trapQuadrature = Trapezoid();
         double dNorm = Math.Pow(xJ[NumberOfSteps - 1, (int)Point.x] - x[NumberOfSteps - 1, (int)Point.x], 2) +
           Math.Pow(xJ[NumberOfSteps - 1, (int)Point.y] - x[NumberOfSteps - 1, (int)Point.y], 2);
         double alpha = 1.0 / 2.0 * (trapQuadrature / dNorm);
+        //Console.WriteLine(alpha);
         for (int i =0; i < NumberOfSteps; i++)
         {
           u[i, (int)Point.x] -= alpha * diffJ[i, (int)Point.x];
           u[i, (int)Point.y] -= alpha * diffJ[i, (int)Point.y];
         }
+        //u.Show();
+        Console.WriteLine($"Current point: {x[NumberOfSteps - 1, (int)Point.x]}\t\t{x[NumberOfSteps - 1, (int)Point.y]}");
       }
     }
   }
