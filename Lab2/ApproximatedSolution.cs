@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using MathPrimitivesLibrary;
 
 namespace ExtremalOptimization.Lab2
@@ -102,6 +103,37 @@ namespace ExtremalOptimization.Lab2
       return sum * StepLength;
     }
 
+    private void WriteToFile()
+    {
+      ClearFile("../../Lab2/Results/CoordX.txt");
+      ClearFile("../../Lab2/Results/CoordY.txt");
+      StreamWriter swX = new StreamWriter("../../Lab2/Results/CoordX.txt");
+      StreamWriter swY = new StreamWriter("../../Lab2/Results/CoordY.txt");
+      for (int i = 0; i < x.Rows; i++)
+      {
+        swX.WriteLine(i + " " + x[i, (int)Point.x]);
+        swY.WriteLine(i + " " + x[i, (int)Point.y]);
+      }
+      swX.Close();
+      swY.Close();
+
+      ClearFile("../../Lab2/Results/ManX.txt");
+      ClearFile("../../Lab2/Results/ManY.txt");
+      StreamWriter swManX = new StreamWriter("../../Lab2/Results/ManX.txt");
+      StreamWriter swManY = new StreamWriter("../../Lab2/Results/ManY.txt");
+      for (int i = 0; i < u.Rows; i++)
+      {
+        swManX.WriteLine(i + " " + u[i, (int)Point.x]);
+        swManY.WriteLine(i + " " + u[i, (int)Point.y]);
+      }
+      swManX.Close();
+      swManY.Close();
+    }
+
+    private void ClearFile(string path)
+    {
+      File.WriteAllText(path, string.Empty);
+    }
     public void Solve()
     {
       double norm = Double.MaxValue; 
@@ -136,6 +168,7 @@ namespace ExtremalOptimization.Lab2
         //u.Show();
         Console.WriteLine($"Current point: {x[NumberOfSteps - 1, (int)Point.x]}\t\t{x[NumberOfSteps - 1, (int)Point.y]}");
       }
+      WriteToFile();
     }
   }
 }
