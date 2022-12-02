@@ -105,6 +105,11 @@ namespace ExtremalOptimization.Lab2
 
     private void WriteToFile()
     {
+      //cd "D:/Projects/NumericalMethods_Extremal/Lab2/Results"
+      /*plot "CoordX.txt" using 1:2
+        replot "CoordY.txt" using 1:2
+        plot "ManX.txt"  using 1:2
+        replot "ManY.txt" using 1:2*/
       ClearFile("../../Lab2/Results/CoordX.txt");
       ClearFile("../../Lab2/Results/CoordY.txt");
       StreamWriter swX = new StreamWriter("../../Lab2/Results/CoordX.txt");
@@ -149,10 +154,12 @@ namespace ExtremalOptimization.Lab2
           double t = i * StepLength;
           diffJ[i, (int)Point.x] = psi[i, (int)Point.x] * (1 - Math.Exp(-t));
           diffJ[i, (int)Point.y] = psi[i, (int)Point.y] * (1 + Math.Sin(2 * t));
+          // uJ = u_k - J'[u_k]
           uJ[i, (int)Point.x] = u[i, (int)Point.x] - diffJ[i, (int)Point.x];
           uJ[i, (int)Point.y] = u[i, (int)Point.y] - diffJ[i, (int)Point.y];
         }
         //diffJ.Show();
+        // Вновь решаем  изначальную задачу, но для другого управления.
         xJ = ForwardSolve(uJ);
         //xJ.Show();
         double trapQuadrature = Trapezoid();
