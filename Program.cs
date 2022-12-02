@@ -21,6 +21,7 @@ namespace ExtremalOptimization
       double StepsY = 100;
       double stepLengthX = 1e-2;
       double stepLengthY = 1e-2;
+      //MathPrimitivesLibrary.Solvers.ExactSolvers.TridiagonalSolver.Solve();
 
     }
   }
