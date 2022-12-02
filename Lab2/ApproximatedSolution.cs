@@ -20,29 +20,29 @@ namespace ExtremalOptimization.Lab2
     private Matrix x { get; set; }
     private Matrix psi { get; set; }
     private Matrix diffJ { get; set; }
-    private Matrix uJ { get; set; }
-    private Matrix xJ { get; set; }
+    private Matrix uTmp { get; set; }
+    private Matrix xTmp { get; set; }
+    private double Norm { get; set; }
 
     // A = (cos(t), t)
     //     (1/(1+t), sin(t))
 
     // B = (1-e^(-t), 0)
     //     (0, 1 + sin(2t))
-    public ApproximatedSolution(int steps, double stepLength, Vector finalPoint)
+    public ApproximatedSolution(int steps, double stepLength, double norm, Vector finalPoint)
     {
-      // + 1 с учётом захвата границ. 
       NumberOfSteps = steps;
       StepLength = stepLength;
       FinalPoint = finalPoint;
+      Norm = norm;
       // Управление, каждый элемент - некоторая точка плоскости.
       u = FillInitialApproximation();
 
       x = new Matrix(NumberOfSteps, 2);
       psi = new Matrix(NumberOfSteps, 2);
       diffJ = new Matrix(NumberOfSteps, 2);
-      uJ = new Matrix(NumberOfSteps, 2);
-      xJ = new Matrix(NumberOfSteps, 2);
-
+      uTmp = new Matrix(NumberOfSteps, 2);
+      xTmp = new Matrix(NumberOfSteps, 2);
     }
 
     private Matrix FillInitialApproximation()
@@ -51,8 +51,8 @@ namespace ExtremalOptimization.Lab2
       for (int i = 0; i < NumberOfSteps; i++)
       {
         double t = i * StepLength;
-        u0[i, (int)Point.x] = 10 * t;
-        u0[i, (int)Point.y] = 20 * t;
+        u0[i, (int)Point.x] = 10;
+        u0[i, (int)Point.y] = 20 ;
       }
       //u0.Show();
       return u0;
@@ -142,7 +142,7 @@ namespace ExtremalOptimization.Lab2
     public void Solve()
     {
       double norm = Double.MaxValue; 
-      while (norm > 1e-3)
+      while (norm > Norm)
       {
         norm = Math.Sqrt(Math.Pow(x[NumberOfSteps - 1, (int)Point.x] - FinalPoint[(int)Point.x], 2) +
         Math.Pow(x[NumberOfSteps - 1, (int)Point.y] - FinalPoint[(int)Point.y], 2)); 
@@ -155,16 +155,16 @@ namespace ExtremalOptimization.Lab2
           diffJ[i, (int)Point.x] = psi[i, (int)Point.x] * (1 - Math.Exp(-t));
           diffJ[i, (int)Point.y] = psi[i, (int)Point.y] * (1 + Math.Sin(2 * t));
           // uJ = u_k - J'[u_k]
-          uJ[i, (int)Point.x] = u[i, (int)Point.x] - diffJ[i, (int)Point.x];
-          uJ[i, (int)Point.y] = u[i, (int)Point.y] - diffJ[i, (int)Point.y];
+          uTmp[i, (int)Point.x] = u[i, (int)Point.x] - diffJ[i, (int)Point.x];
+          uTmp[i, (int)Point.y] = u[i, (int)Point.y] - diffJ[i, (int)Point.y];
         }
         //diffJ.Show();
         // Вновь решаем  изначальную задачу, но для другого управления.
-        xJ = ForwardSolve(uJ);
+        xTmp = ForwardSolve(uTmp);
         //xJ.Show();
         double trapQuadrature = Trapezoid();
-        double dNorm = Math.Pow(xJ[NumberOfSteps - 1, (int)Point.x] - x[NumberOfSteps - 1, (int)Point.x], 2) +
-          Math.Pow(xJ[NumberOfSteps - 1, (int)Point.y] - x[NumberOfSteps - 1, (int)Point.y], 2);
+        double dNorm = Math.Pow(xTmp[NumberOfSteps - 1, (int)Point.x] - x[NumberOfSteps - 1, (int)Point.x], 2) +
+          Math.Pow(xTmp[NumberOfSteps - 1, (int)Point.y] - x[NumberOfSteps - 1, (int)Point.y], 2);
         double alpha = 1.0 / 2.0 * (trapQuadrature / dNorm);
         //Console.WriteLine(alpha);
         for (int i =0; i < NumberOfSteps; i++)
