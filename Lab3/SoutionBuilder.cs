@@ -64,7 +64,7 @@ namespace ExtremalOptimization.Lab3
         Grid[0, i] = Phi(i * rmX.StepLength);
         //ExcatSolution[0, i] = Management(i * rmX.StepLength);
       }
-      for (int i = 0; j < Grid.Rows; i++)
+      for (int i = 0; i < Grid.Rows; i++)
       {
         Grid[i, 0] = 0;
         //ExcatSolution[i, 0] = 0;
