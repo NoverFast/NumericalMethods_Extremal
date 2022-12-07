@@ -23,6 +23,9 @@ namespace ExtremalOptimization.Lab3
     private double pMin { get { return 0; } }
     private double pMax { get { return 4000; } }
 
+    public double a { get; set; }
+    public double b { get; set; }
+
     public int StepsX { get; set; }
     public int StepsY { get; set; }
 
@@ -46,14 +49,24 @@ namespace ExtremalOptimization.Lab3
       this.rmY = rmY;
       StepsX = rmX.numberOfSteps;
       StepsY = rmY.numberOfSteps;
-      Grid = new Matrix(StepsX + 1, StepsY + 1);
-      ExcatSolution = new Matrix(StepsX + 1, StepsY + 1);
+
+      a = aKoef;
+      b = bKoef;
+      //Grid = new Matrix(StepsX + 1, StepsY + 1);
+      //ExcatSolution = new Matrix(StepsX + 1, StepsY + 1);
       Phi = phi;
       ManagementFunc = startManagement;
-      FillInitialConditions();
+      
+      Management = new Vector(StepsX);
+      for (int i =0; i < Management.Size; i++)
+      {
+        Management[i] = ManagementFunc(i * rmX.StepLength);
+      }
+
+      //FillInitialConditions();
     }
 
-    private void FillInitialConditions()
+    /*private void FillInitialConditions()
     {
       for (int i = 0; i < Management.Size; i++)
       {
@@ -69,71 +82,135 @@ namespace ExtremalOptimization.Lab3
         Grid[i, 0] = 0;
         //ExcatSolution[i, 0] = 0;
       }
+    } */
+
+    private double RectangleSquare(Vector vec, double step)
+    {
+      double sum = 0;
+      for (int i =0; i < vec.Size; i++)
+      {
+        sum += vec[i] * rmX.StepLength;
+      }
+      return sum;
     }
 
-    public Matrix Solve()
+    private double Norm(Vector vec, Vector trueY)
     {
-      return null;
+      Vector tmp = new Vector(vec.Size);
+      for (int i =0; i < tmp.Size; i++)
+      {
+        tmp[i] = Math.Pow(vec[i] - trueY[i], 2);
+      }
+
+      return RectangleSquare(tmp, rmX.StepLength);
     }
 
-
-    public Matrix SolveForward()
+    public Matrix Solve(Vector y, double precision)
     {
-      Array.Clear(Grid);
-      Array.Clear(exactSolution);
+      Vector currManagement = Management;
+      double norm = double.PositiveInfinity;
+      int iterations = 0;
 
-      // Начальные условия
-      for (int i = 0; i <= numberOfStepsSpace; i++)
+      while (norm > precision)
       {
-        gridMatrix[0, i] = phi(i * gridStepSpace);
-        exactSolution[0, i] = ExactSolution(0, i * gridStepSpace);
-      }
+        iterations++;
+        Matrix u = SolveForward(currManagement);
+        norm = Norm(u[u.Rows - 1], y);
 
-      // Граничные условия
-      for (int i = 1; i <= numberOfStepsTime; i++)
-      {
-        gridMatrix[i, 0] = psi0(i * gridStepTime);
-        exactSolution[i, 0] = ExactSolution(i * gridStepTime, 0);
-      }
+        Console.WriteLine($"Current iteration: {iterations}, Norm: {norm}");
 
-      for (int i = 1; i <= numberOfStepsTime; i++)
-      {
-        gridMatrix[i, gridMatrix.GetLength(1) - 1] = psi1(i * gridStepTime);
-        exactSolution[i, exactSolution.GetLength(1) - 1] = ExactSolution(i * gridStepTime, 1);
-      }
+        Matrix psi = SolveBackwards(u, y);
+        Vector tmpManagement = new Vector(psi.Rows);
 
-      List<double> currentU = new List<double>();
-      for (int t = 1; t <= numberOfStepsTime; t++)
-      {
-        currentU.Clear();
-        currentU = TriDiagonalSolve(BuildMatrixImplicit(), BuildCoefsImplicit(t)); // расчитываем температуру в узлах сетки
-        for (int x = 0; x < numberOfStepsSpace; x++)
+        for (int i =0; i < tmpManagement.Size; i++)
         {
-          gridMatrix[t, x] = currentU[x]; // добавляем полученные значения в исходную матрицу-сетку
-          exactSolution[t, x] = ExactSolution(t * gridStepTime, x * gridStepSpace);
-        }
-      }
-      if (writeToFile)
-      {
-        //Helper.ClearFile(@"G:\Универ\3 курс\Теория Разностных Схем\Лабы\2 лаба\errorImplicitValuesX" + numberOfStepsSpace + "T" + numberOfStepsTime + ".txt");
-        for (int t = 0; t < gridMatrix.GetLength(0); t++)
-        {
-          for (int x = 0; x < gridMatrix.GetLength(1); x++)
+          if (psi[i, psi[i].Size - 1] >= 0)
           {
-            /*  Helper.WriteToFile(@"G:\Универ\3 курс\Теория Разностных Схем\Лабы\2 лаба\errorImplicitValuesX" + numberOfStepsSpace + "T" + numberOfStepsTime + ".txt",
-                t * gridStepTime, x * gridStepSpace, Math.Abs(gridMatrix[t, x] - exactSolution[t,x])); */
+            tmpManagement[i] = pMin;
+          }
+          else
+          {
+            tmpManagement[i] = pMax;
           }
         }
-        Helper.WriteToFile(@"G:\Универ\3 курс\Теория Разностных Схем\Лабы\2 лаба\implicitUniverseMeasures.txt",
-          numberOfStepsSpace, Math.Abs(Helper.UniformMeasure(gridMatrix, exactSolution)));
+
+        Vector integralPointsU = new Vector(psi[0].Size);
+        for (int i =0; i < integralPointsU.Size; i++)
+        {
+          integralPointsU[i] = a * a * b * psi[i][psi[i].Size - 1] * (tmpManagement[i] - currManagement[i]);
+        }
+
+        double integral = RectangleSquare(integralPointsU, rmY.StepLength);
+
+        Vector intergalPointsL = new Vector(u[u.Rows - 1].Size);
+        Matrix tmpU = SolveForward(tmpManagement);
+        for (int i = 0; i < integralPointsU.Size; i++)
+        {
+          intergalPointsL[i] = Math.Pow(tmpU[tmpU.Rows - 1, i] - u[u.Rows - 1, i], 2);
+        }
+        double alpha = Math.Min(-0.5 * RectangleSquare(integralPointsU, rmY.StepLength) /
+          RectangleSquare(intergalPointsL, rmX.StepLength), 1);
+        for (int i = 0; i < currManagement.Size; i++)
+        {
+          currManagement[i] = currManagement[i] + alpha * (tmpManagement[i] - currManagement[i]);
+        }
       }
-      Console.WriteLine("Uniform Measure: " + Helper.UniformMeasure(gridMatrix, exactSolution));
-      return gridMatrix;
+      Matrix answerU = SolveForward(currManagement);
+      return answerU;
     }
 
-    public Matrix SolveBackwards()
+
+    public Matrix SolveForward(Vector currentManagement)
     {
-      return null;
+      Matrix u = new Matrix(StepsX, StepsY);
+      Matrix A = new Matrix(StepsX - 2, StepsY - 2);
+      Vector B = new Vector(StepsX - 2);
+
+      for (int i = 0; i < u[0].Size; i++)
+      {
+        u[0, i] = Phi(rmX.StepLength * i);
+      }
+
+      double k1 = a * a / (rmX.StepLength * rmX.StepLength);
+      double k2 = -((2.0 * a * a) / (rmX.StepLength * rmX.StepLength) + 1.0 / rmY.StepLength);
+      double k3 = k1;
+      double k4 = -1.0 / rmY.StepLength;
+
+      for (int i =1; i < StepsY; i++)
+      {
+        double p1 = 0;
+        A[0, 0] = k1 + k2;
+        A[0, 1] = k3;
+        B[0] = k4 * u[i - 1, 1] + k1 * p1 * rmX.StepLength;
+
+        for (int j = 1; j < A.Rows-1; j++)
+        {
+          A[j, j - 1] = k1;
+          A[j, j] = k2;
+          A[j, j] = k3;
+          B[j] = k4 * u[i - 1, j + 1];
+        }
+
+        A[StepsX - 1, StepsX - 2] = k1;
+        A[StepsX - 1, StepsX - 1] = k2 + k3 * (1.0 / (1.0 + b + rmX.StepLength));
+        B[StepsX - 1] = k4 * u[i - 1, u[i - 1].Size - 2] -
+          k3 * ((1.0 / (1.0 + b * rmX.StepLength)) * b * rmX.StepLength * currentManagement[i]);
+        Vector tmpU = MathPrimitivesLibrary.Solvers.ExactSolvers.TridiagonalSolver.Solve(A, B);
+        for (int j = 0; j < tmpU.Size; j++)
+        {
+          u[i,j + 1] = tmpU[j];
+        }
+        u[i, 0] = u[i, 1] - p1 * rmX.StepLength;
+        u[i, u[i].Size - 1] = u[i, u[i].Size - 2] * (1.0 / (1.0 + b * rmX.StepLength))
+          + b * rmX.StepLength * currentManagement[i];
+      }
+
+      return u;
+    }
+
+    public Matrix SolveBackwards(Matrix u, Vector y)
+    {
+      return new Matrix(1, 1);
     }
   }
 }
