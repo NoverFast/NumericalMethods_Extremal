@@ -157,8 +157,11 @@ namespace ExtremalOptimization.Lab3
       }
       Matrix answerU = SolveForward(currManagement, false);
 
+      WriteManagement(currManagement, "../../Lab3/Results/management.txt");
+
       ClearFile("../../Lab3/Results/trueSol.txt");
       StreamWriter sw = new StreamWriter("../../Lab3/Results/trueSol.txt");
+      
       // Запмсываем в файл температуру при данном управлении
       for (int i = 0; i < answerU.Rows; i++)
       {
