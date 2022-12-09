@@ -46,8 +46,8 @@ namespace ExtremalOptimization.Lab3
       StepsX = rmX.numberOfSteps;
       StepsY = rmY.numberOfSteps;
 
-      StepsXLength = rmX.StepLength;
-      StepsYLength = rmY.StepLength;
+      StepsXLength = 1.0 / (StepsX - 1);
+      StepsYLength = 1.0 / (StepsY - 1);
 
       Alpha = aKoef;
       Beta = bKoef;
@@ -58,7 +58,7 @@ namespace ExtremalOptimization.Lab3
       StartManagement = new Vector(StepsY);
       for (int i = 0; i < StepsY; i++)
       {
-        StartManagement[i] = ManagementFunc(i * rmY.StepLength);
+        StartManagement[i] = ManagementFunc(i * StepsYLength);
       }
     }
 
@@ -67,7 +67,7 @@ namespace ExtremalOptimization.Lab3
       double sum = 0;
       for (int i =0; i < vec.Size; i++)
       {
-        sum += vec[i] * rmX.StepLength;
+        sum += vec[i] * StepsXLength;
       }
       return sum;
     }
@@ -80,7 +80,7 @@ namespace ExtremalOptimization.Lab3
         tmp[i] = Math.Pow(vec[i] - trueY[i], 2);
       }
 
-      return RectangleSquare(tmp, rmX.StepLength);
+      return RectangleSquare(tmp, StepsYLength);
     }
 
     public Vector Solve(Vector y, double precision)
@@ -93,11 +93,13 @@ namespace ExtremalOptimization.Lab3
       {
         iterations++;
         Matrix u = SolveForward(currManagement, false);
+        //u.Show();
         norm = Norm(u[u.Rows - 1], y);
 
         Console.WriteLine($"Current iteration: {iterations}, Norm: {norm}");
 
         Matrix psi = SolveBackwards(u, y);
+        //psi.Show();
         Vector tmpManagement = new Vector(psi.Rows);
 
         for (int i =0; i < tmpManagement.Size; i++)
@@ -124,8 +126,8 @@ namespace ExtremalOptimization.Lab3
         {
           intergalPointsL[i] = Math.Pow(tmpU[tmpU.Rows - 1, i] - u[u.Rows - 1, i], 2);
         }
-        double alpha = Math.Min(-0.5 * RectangleSquare(integralPointsU, rmY.StepLength) /
-          RectangleSquare(intergalPointsL, rmX.StepLength), 1);
+        double alpha = Math.Min(-0.5 * RectangleSquare(integralPointsU, StepsYLength) /
+          RectangleSquare(intergalPointsL, StepsXLength), 1);
         for (int i = 0; i < currManagement.Size; i++)
         {
           currManagement[i] = currManagement[i] + alpha * (tmpManagement[i] - currManagement[i]);
@@ -148,41 +150,44 @@ namespace ExtremalOptimization.Lab3
 
       for (int i = 0; i < u[0].Size; i++)
       {
-        u[0, i] = PhiFunc(rmX.StepLength * i);
+        u[0, i] = PhiFunc(StepsXLength * i);
       }
 
-      double k1 = Alpha * Alpha / (rmX.StepLength * rmX.StepLength);
-      double k2 = -((2.0 * Alpha * Alpha) / (rmX.StepLength * rmX.StepLength) + 1.0 / rmY.StepLength);
+      double k1 = Alpha * Alpha / (StepsXLength * StepsXLength);
+      double k2 = -((2.0 * Alpha * Alpha) / (StepsXLength * StepsXLength) + 1.0 / StepsYLength);
       double k3 = k1;
-      double k4 = -1.0 / rmY.StepLength;
+      double k4 = -1.0 / StepsYLength;
 
       for (int i =1; i < StepsY; i++)
       {
         double p1 = 0;
         A[0, 0] = k1 + k2;
         A[0, 1] = k3;
-        B[0] = k4 * u[i - 1, 1] + k1 * p1 * rmX.StepLength;
+        B[0] = k4 * u[i - 1, 1] + k1 * p1 * StepsXLength;
 
         for (int j = 1; j < A.Rows-1; j++)
         {
           A[j, j - 1] = k1;
           A[j, j] = k2;
-          A[j, j] = k3;
+          A[j, j + 1] = k3;
           B[j] = k4 * u[i - 1, j + 1];
         }
 
         A[StepsX - 3, StepsX - 4] = k1;
-        A[StepsX - 3, StepsX - 3] = k2 + k3 * (1.0 / (1.0 + Beta * rmX.StepLength));
+        A[StepsX - 3, StepsX - 3] = k2 + k3 * (1.0 / (1.0 + Beta * StepsXLength));
         B[StepsX - 3] = k4 * u[i - 1, u[i - 1].Size - 2] -
-          k3 * ((1.0 / (1.0 + Beta * rmX.StepLength)) * Beta * rmX.StepLength * currentManagement[i]);
+          k3 * ((1.0 / (1.0 + Beta * StepsXLength)) * Beta * StepsXLength * currentManagement[i]);
+        //B.Show();
+        //A.Show();
         Vector tmpU = MathPrimitivesLibrary.Solvers.ExactSolvers.TridiagonalSolver.Solve(A, B);
         for (int j = 0; j < tmpU.Size; j++)
         {
           u[i,j + 1] = tmpU[j];
         }
-        u[i, 0] = u[i, 1] - p1 * rmX.StepLength;
-        u[i, u[i].Size - 1] = u[i, u[i].Size - 2] * (1.0 / (1.0 + Beta * rmX.StepLength))
-          + Beta * rmX.StepLength * currentManagement[i];
+        u[i, 0] = u[i, 1] - p1 * StepsXLength;
+        u[i, u[i].Size - 1] = u[i, u[i].Size - 2] * (1.0 / (1.0 + Beta * StepsXLength))
+          + Beta * StepsXLength * currentManagement[i];
+        //u.Show();
       }
 
       return u;
@@ -194,82 +199,48 @@ namespace ExtremalOptimization.Lab3
       for (int i =0; i < psi[psi.Rows -1].Size; i++)
       {
         psi[psi.Rows-1, i] = 2 * (u[u.Rows -1, i] - y[i]);
+        //Console.WriteLine(psi[psi.Rows - 1, i]);
       }
-
       Matrix A = new Matrix(StepsX - 2, StepsY - 2);
       Vector B = new Vector(StepsX - 2);
 
-      double k1 = -Alpha * Alpha / (rmX.StepLength * rmX.StepLength);
-      double k2 = -((2.0 * Alpha * Alpha) / (rmX.StepLength * rmX.StepLength) + 1.0 / rmY.StepLength);
+      double k1 = -Alpha * Alpha / (StepsXLength * StepsXLength);
+      double k2 = ((2.0 * Alpha * Alpha) / (StepsXLength * StepsXLength) + 1.0 / StepsYLength);
       double k3 = k1;
-      double k4 = 1.0 / rmY.StepLength;
+      double k4 = 1.0 / StepsYLength;
 
       for (int i = StepsY - 2; i >= 0; i--)
       {
         double p1 = 0;
         A[0, 0] = k1 + k2;
         A[0, 1] = k3;
-        B[0] = k4 * psi[i + 1, 1] + k1 * p1 * rmX.StepLength;
+        B[0] = k4 * psi[i + 1, 1] + k1 * p1 * StepsXLength;
 
         for (int j = 1; j < A.Rows - 1; j++)
         {
           A[j, j - 1] = k1;
           A[j, j] = k2;
-          A[j, j] = k3;
+          A[j, j + 1] = k3;
           B[j] = k4 * psi[i + 1, j + 1];
         }
 
         A[StepsX - 3, StepsX - 4] = k1;
-        A[StepsX - 3, StepsX - 3] = k2 + k3 * (1.0 / (1.0 + Beta * rmX.StepLength));
+        A[StepsX - 3, StepsX - 3] = k2 + k3 * (1.0 / (1.0 + Beta * StepsXLength));
         B[StepsX - 3] = k4 * psi[i + 1, psi[i + 1].Size - 2];
 
+        //B.Show();
+        //A.Show();
         Vector tmpPsi = MathPrimitivesLibrary.Solvers.ExactSolvers.TridiagonalSolver.Solve(A, B);
         for (int j = 0; j < tmpPsi.Size; j++)
         {
           psi[i, j + 1] = tmpPsi[j];
         }
         psi[i, 0] = psi[i, 1] - p1 * rmX.StepLength;
-        psi[i, psi[i].Size - 1] = psi[i, psi[i].Size - 2] * (1.0 / (1.0 + Beta * rmX.StepLength));
+        psi[i, psi[i].Size - 1] = psi[i, psi[i].Size - 2] * (1.0 / (1.0 + Beta * StepsXLength));
       }
+
       return psi;
     }
-
-    enum ForwardSweepCoefsEnum
-    {
-      y = 0,
-      alpha = 1,
-      beta = 2
-    }
-    private List<double> TriDiagonalSolve(double[,] matrix, double[] freeCoefs)
-    {
-      int n = StepsX; // Размерность матрицы по шагу пространства (numberOfStepsSpace + 1)
-      List<double> answerVector = new List<double>();
-      List<List<double>> forwardSweepCoefs = new List<List<double>>();
-      double y = matrix[0, 0];
-      double alpha = -matrix[0, 1] / matrix[0, 0];
-      double beta = freeCoefs[0] / matrix[0, 0];
-      forwardSweepCoefs.Add(new List<double>() { y, alpha, beta });
-      for (int i = 1; i < n; i++)
-      {
-        y = matrix[i, i] + matrix[i, i - 1] * forwardSweepCoefs[i - 1][(int)ForwardSweepCoefsEnum.alpha];
-        alpha = -matrix[i, i + 1] / y;
-        beta = (freeCoefs[i] - matrix[i, i - 1] * forwardSweepCoefs[i - 1][(int)ForwardSweepCoefsEnum.beta]) / y;
-        forwardSweepCoefs.Add(new List<double>() { y, alpha, beta });
-      }
-      y = matrix[n, n] + matrix[n, n - 1] * forwardSweepCoefs[n - 1][(int)ForwardSweepCoefsEnum.alpha];
-      beta = (freeCoefs[n] - matrix[n, n - 1] * forwardSweepCoefs[n - 1][(int)ForwardSweepCoefsEnum.beta]) / y;
-      forwardSweepCoefs.Add(new List<double>() { y, double.NaN, beta });
-      answerVector.Add(forwardSweepCoefs[n][(int)ForwardSweepCoefsEnum.beta]);
-      int count = 0;
-      for (int i = n - 1; i >= 0; i--)
-      {
-        answerVector.Add(forwardSweepCoefs[i][(int)ForwardSweepCoefsEnum.alpha] * answerVector[count] + forwardSweepCoefs[i][(int)ForwardSweepCoefsEnum.beta]);
-        count++;
-      }
-      answerVector.Reverse();
-      return answerVector;
-    }
-
   }
 }
 

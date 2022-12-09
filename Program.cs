@@ -17,17 +17,17 @@ namespace ExtremalOptimization
      // aS.Solve();
       //Console.ReadLine(); 
       Console.WriteLine("Task 3");
-      RegularMesh rm1 = new RegularMesh(0, 1, 10);
-      RegularMesh rm2 = new RegularMesh(0, 1, 10);
+      RegularMesh rm1 = new RegularMesh(0, 1, 25);
+      RegularMesh rm2 = new RegularMesh(0, 1, 25);
       // НУ
-      Func<double, double> phi = (x => 10 * x * x * x);
+      Func<double, double> phi = (x => 100* x);
       // истинное управление
       Func<double, double> exactManagement = (x => 1000 * x * x * (1 - x));
       Func<double, double> appManagement = (x => 1000 * Math.Sin(10 * x));
-      SoutionBuilder sB = new SoutionBuilder(rm1, rm2, 1, 1, phi, exactManagement);
+      SoutionBuilder sB = new SoutionBuilder(rm1, rm2, 2, 4, phi, exactManagement);
       Matrix trueU = sB.SolveForward(new Vector(new double[] { }), true);
       //trueU[trueU.Rows-1].Show();
-      SoutionBuilder sBAp = new SoutionBuilder(rm1, rm2, 1, 1, phi, appManagement);
+      SoutionBuilder sBAp = new SoutionBuilder(rm1, rm2, 2, 4, phi, appManagement);
       Vector appY = sBAp.Solve(trueU[trueU.Rows - 1], 1e-3);
       Console.ReadLine();
     }
