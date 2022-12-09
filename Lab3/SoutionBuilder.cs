@@ -11,23 +11,20 @@ namespace ExtremalOptimization.Lab3
   // Оптимизация функционала методом скорейшего спуска. 
   public class SoutionBuilder
   {
-    enum ForwardSweepCoefsEnum
-    {
-      y = 0,
-      alpha = 1,
-      beta = 2
-    }
     public Func<double, double> ManagementFunc { get; set; }
-    public Func<double, double> Phi { get; set; }
+    public Func<double, double> PhiFunc { get; set; }
 
     private double pMin { get { return 0; } }
     private double pMax { get { return 4000; } }
 
-    public double a { get; set; }
-    public double b { get; set; }
+    public double Alpha { get; set; }
+    public double Beta { get; set; }
 
     public int StepsX { get; set; }
     public int StepsY { get; set; }
+
+    public double StepsXLength { get; set; }
+    public double StepsYLength { get; set; }
 
     public RegularMesh rmX { get; set; }
     public RegularMesh rmY { get; set; }
@@ -39,50 +36,31 @@ namespace ExtremalOptimization.Lab3
     /// <summary>
     /// Управление
     /// </summary>
-    public Vector Management { get; set; }
-    public Vector f { get; set; }
+    public Vector StartManagement { get; set; }
 
     public SoutionBuilder(RegularMesh rmX, RegularMesh rmY, 
-      double aKoef, double bKoef, Func<double, double> phi, Func<double, double> startManagement)
+      double aKoef, double bKoef, Func<double, double> phi, Func<double, double> management)
     {
       this.rmX = rmX;
       this.rmY = rmY;
       StepsX = rmX.numberOfSteps;
       StepsY = rmY.numberOfSteps;
 
-      a = aKoef;
-      b = bKoef;
-      //Grid = new Matrix(StepsX + 1, StepsY + 1);
-      //ExcatSolution = new Matrix(StepsX + 1, StepsY + 1);
-      Phi = phi;
-      ManagementFunc = startManagement;
+      StepsXLength = rmX.StepLength;
+      StepsYLength = rmY.StepLength;
+
+      Alpha = aKoef;
+      Beta = bKoef;
+
+      PhiFunc = phi;
+      ManagementFunc = management;
       
-      Management = new Vector(StepsX);
-      for (int i =0; i < Management.Size; i++)
+      StartManagement = new Vector(StepsY);
+      for (int i = 0; i < StepsY; i++)
       {
-        Management[i] = ManagementFunc(i * rmX.StepLength);
+        StartManagement[i] = ManagementFunc(i * rmY.StepLength);
       }
-
-      //FillInitialConditions();
     }
-
-    /*private void FillInitialConditions()
-    {
-      for (int i = 0; i < Management.Size; i++)
-      {
-        Management[i] = ManagementFunc(i * rmY.StepLength);
-      }
-      for (int i = 0; i < Grid.Coloumns; i++)
-      {
-        Grid[0, i] = Phi(i * rmX.StepLength);
-        //ExcatSolution[0, i] = Management(i * rmX.StepLength);
-      }
-      for (int i = 0; i < Grid.Rows; i++)
-      {
-        Grid[i, 0] = 0;
-        //ExcatSolution[i, 0] = 0;
-      }
-    } */
 
     private double RectangleSquare(Vector vec, double step)
     {
@@ -97,7 +75,7 @@ namespace ExtremalOptimization.Lab3
     private double Norm(Vector vec, Vector trueY)
     {
       Vector tmp = new Vector(vec.Size);
-      for (int i =0; i < tmp.Size; i++)
+      for (int i = 0; i < tmp.Size; i++)
       {
         tmp[i] = Math.Pow(vec[i] - trueY[i], 2);
       }
@@ -105,16 +83,16 @@ namespace ExtremalOptimization.Lab3
       return RectangleSquare(tmp, rmX.StepLength);
     }
 
-    public Matrix Solve(Vector y, double precision)
+    public Vector Solve(Vector y, double precision)
     {
-      Vector currManagement = Management;
+      Vector currManagement = StartManagement;
       double norm = double.PositiveInfinity;
       int iterations = 0;
 
       while (norm > precision)
       {
         iterations++;
-        Matrix u = SolveForward(currManagement);
+        Matrix u = SolveForward(currManagement, false);
         norm = Norm(u[u.Rows - 1], y);
 
         Console.WriteLine($"Current iteration: {iterations}, Norm: {norm}");
@@ -137,13 +115,11 @@ namespace ExtremalOptimization.Lab3
         Vector integralPointsU = new Vector(psi[0].Size);
         for (int i =0; i < integralPointsU.Size; i++)
         {
-          integralPointsU[i] = a * a * b * psi[i][psi[i].Size - 1] * (tmpManagement[i] - currManagement[i]);
+          integralPointsU[i] = Alpha * Alpha * Beta * psi[i][psi[i].Size - 1] * (tmpManagement[i] - currManagement[i]);
         }
 
-        double integral = RectangleSquare(integralPointsU, rmY.StepLength);
-
         Vector intergalPointsL = new Vector(u[u.Rows - 1].Size);
-        Matrix tmpU = SolveForward(tmpManagement);
+        Matrix tmpU = SolveForward(tmpManagement, false);
         for (int i = 0; i < integralPointsU.Size; i++)
         {
           intergalPointsL[i] = Math.Pow(tmpU[tmpU.Rows - 1, i] - u[u.Rows - 1, i], 2);
@@ -155,24 +131,28 @@ namespace ExtremalOptimization.Lab3
           currManagement[i] = currManagement[i] + alpha * (tmpManagement[i] - currManagement[i]);
         }
       }
-      Matrix answerU = SolveForward(currManagement);
-      return answerU;
+      Matrix answerU = SolveForward(currManagement, false);
+      return answerU[answerU.Rows - 1];
     }
 
 
-    public Matrix SolveForward(Vector currentManagement)
+    public Matrix SolveForward(Vector currentManagement, bool isEmpty)
     {
+      if (isEmpty)
+      {
+        currentManagement = StartManagement;
+      }
       Matrix u = new Matrix(StepsX, StepsY);
       Matrix A = new Matrix(StepsX - 2, StepsY - 2);
       Vector B = new Vector(StepsX - 2);
 
       for (int i = 0; i < u[0].Size; i++)
       {
-        u[0, i] = Phi(rmX.StepLength * i);
+        u[0, i] = PhiFunc(rmX.StepLength * i);
       }
 
-      double k1 = a * a / (rmX.StepLength * rmX.StepLength);
-      double k2 = -((2.0 * a * a) / (rmX.StepLength * rmX.StepLength) + 1.0 / rmY.StepLength);
+      double k1 = Alpha * Alpha / (rmX.StepLength * rmX.StepLength);
+      double k2 = -((2.0 * Alpha * Alpha) / (rmX.StepLength * rmX.StepLength) + 1.0 / rmY.StepLength);
       double k3 = k1;
       double k4 = -1.0 / rmY.StepLength;
 
@@ -191,18 +171,18 @@ namespace ExtremalOptimization.Lab3
           B[j] = k4 * u[i - 1, j + 1];
         }
 
-        A[StepsX - 1, StepsX - 2] = k1;
-        A[StepsX - 1, StepsX - 1] = k2 + k3 * (1.0 / (1.0 + b + rmX.StepLength));
-        B[StepsX - 1] = k4 * u[i - 1, u[i - 1].Size - 2] -
-          k3 * ((1.0 / (1.0 + b * rmX.StepLength)) * b * rmX.StepLength * currentManagement[i]);
+        A[StepsX - 3, StepsX - 4] = k1;
+        A[StepsX - 3, StepsX - 3] = k2 + k3 * (1.0 / (1.0 + Beta * rmX.StepLength));
+        B[StepsX - 3] = k4 * u[i - 1, u[i - 1].Size - 2] -
+          k3 * ((1.0 / (1.0 + Beta * rmX.StepLength)) * Beta * rmX.StepLength * currentManagement[i]);
         Vector tmpU = MathPrimitivesLibrary.Solvers.ExactSolvers.TridiagonalSolver.Solve(A, B);
         for (int j = 0; j < tmpU.Size; j++)
         {
           u[i,j + 1] = tmpU[j];
         }
         u[i, 0] = u[i, 1] - p1 * rmX.StepLength;
-        u[i, u[i].Size - 1] = u[i, u[i].Size - 2] * (1.0 / (1.0 + b * rmX.StepLength))
-          + b * rmX.StepLength * currentManagement[i];
+        u[i, u[i].Size - 1] = u[i, u[i].Size - 2] * (1.0 / (1.0 + Beta * rmX.StepLength))
+          + Beta * rmX.StepLength * currentManagement[i];
       }
 
       return u;
@@ -210,8 +190,86 @@ namespace ExtremalOptimization.Lab3
 
     public Matrix SolveBackwards(Matrix u, Vector y)
     {
-      return new Matrix(1, 1);
+      Matrix psi = new Matrix(StepsY, StepsX);
+      for (int i =0; i < psi[psi.Rows -1].Size; i++)
+      {
+        psi[psi.Rows-1, i] = 2 * (u[u.Rows -1, i] - y[i]);
+      }
+
+      Matrix A = new Matrix(StepsX - 2, StepsY - 2);
+      Vector B = new Vector(StepsX - 2);
+
+      double k1 = -Alpha * Alpha / (rmX.StepLength * rmX.StepLength);
+      double k2 = -((2.0 * Alpha * Alpha) / (rmX.StepLength * rmX.StepLength) + 1.0 / rmY.StepLength);
+      double k3 = k1;
+      double k4 = 1.0 / rmY.StepLength;
+
+      for (int i = StepsY - 2; i >= 0; i--)
+      {
+        double p1 = 0;
+        A[0, 0] = k1 + k2;
+        A[0, 1] = k3;
+        B[0] = k4 * psi[i + 1, 1] + k1 * p1 * rmX.StepLength;
+
+        for (int j = 1; j < A.Rows - 1; j++)
+        {
+          A[j, j - 1] = k1;
+          A[j, j] = k2;
+          A[j, j] = k3;
+          B[j] = k4 * psi[i + 1, j + 1];
+        }
+
+        A[StepsX - 3, StepsX - 4] = k1;
+        A[StepsX - 3, StepsX - 3] = k2 + k3 * (1.0 / (1.0 + Beta * rmX.StepLength));
+        B[StepsX - 3] = k4 * psi[i + 1, psi[i + 1].Size - 2];
+
+        Vector tmpPsi = MathPrimitivesLibrary.Solvers.ExactSolvers.TridiagonalSolver.Solve(A, B);
+        for (int j = 0; j < tmpPsi.Size; j++)
+        {
+          psi[i, j + 1] = tmpPsi[j];
+        }
+        psi[i, 0] = psi[i, 1] - p1 * rmX.StepLength;
+        psi[i, psi[i].Size - 1] = psi[i, psi[i].Size - 2] * (1.0 / (1.0 + Beta * rmX.StepLength));
+      }
+      return psi;
     }
+
+    enum ForwardSweepCoefsEnum
+    {
+      y = 0,
+      alpha = 1,
+      beta = 2
+    }
+    private List<double> TriDiagonalSolve(double[,] matrix, double[] freeCoefs)
+    {
+      int n = StepsX; // Размерность матрицы по шагу пространства (numberOfStepsSpace + 1)
+      List<double> answerVector = new List<double>();
+      List<List<double>> forwardSweepCoefs = new List<List<double>>();
+      double y = matrix[0, 0];
+      double alpha = -matrix[0, 1] / matrix[0, 0];
+      double beta = freeCoefs[0] / matrix[0, 0];
+      forwardSweepCoefs.Add(new List<double>() { y, alpha, beta });
+      for (int i = 1; i < n; i++)
+      {
+        y = matrix[i, i] + matrix[i, i - 1] * forwardSweepCoefs[i - 1][(int)ForwardSweepCoefsEnum.alpha];
+        alpha = -matrix[i, i + 1] / y;
+        beta = (freeCoefs[i] - matrix[i, i - 1] * forwardSweepCoefs[i - 1][(int)ForwardSweepCoefsEnum.beta]) / y;
+        forwardSweepCoefs.Add(new List<double>() { y, alpha, beta });
+      }
+      y = matrix[n, n] + matrix[n, n - 1] * forwardSweepCoefs[n - 1][(int)ForwardSweepCoefsEnum.alpha];
+      beta = (freeCoefs[n] - matrix[n, n - 1] * forwardSweepCoefs[n - 1][(int)ForwardSweepCoefsEnum.beta]) / y;
+      forwardSweepCoefs.Add(new List<double>() { y, double.NaN, beta });
+      answerVector.Add(forwardSweepCoefs[n][(int)ForwardSweepCoefsEnum.beta]);
+      int count = 0;
+      for (int i = n - 1; i >= 0; i--)
+      {
+        answerVector.Add(forwardSweepCoefs[i][(int)ForwardSweepCoefsEnum.alpha] * answerVector[count] + forwardSweepCoefs[i][(int)ForwardSweepCoefsEnum.beta]);
+        count++;
+      }
+      answerVector.Reverse();
+      return answerVector;
+    }
+
   }
 }
 
