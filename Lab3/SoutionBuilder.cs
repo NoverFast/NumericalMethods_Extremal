@@ -2,6 +2,7 @@
 using MathPrimitivesLibrary.Types.Meshes;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -60,8 +61,15 @@ namespace ExtremalOptimization.Lab3
       {
         StartManagement[i] = ManagementFunc(i * StepsYLength);
       }
+      Console.WriteLine($"Params: \nAlpha: {Alpha}, Beta: {Beta}" +
+        $"\nNumber of steps by each direction: ({StepsX}, {StepsY})" +
+        $"\nStep length by each direction: ({StepsXLength}, {StepsYLength})");
     }
 
+    private void ClearFile(string path)
+    {
+      File.WriteAllText(path, string.Empty);
+    }
     private double RectangleSquare(Vector vec, double step)
     {
       double sum = 0;
@@ -83,21 +91,32 @@ namespace ExtremalOptimization.Lab3
       return RectangleSquare(tmp, StepsYLength);
     }
 
-    public Vector Solve(Vector y, double precision)
+    public void WriteManagement(Vector v, string path)
+    {
+      ClearFile(path);
+      StreamWriter sw = new StreamWriter(path);
+      {
+        for (int i =0; i < v.Size; i++)
+        {
+          sw.WriteLine(i * StepsXLength + " " + v[i]);
+        }
+      }
+      sw.Close();
+    }
+
+    public Matrix Solve(Vector y, double precision, int showEveryIteration = 100)
     {
       Vector currManagement = StartManagement;
       double norm = double.PositiveInfinity;
       int iterations = 0;
 
+      Console.WriteLine($"Precision: {precision}");
       while (norm > precision)
       {
         iterations++;
         Matrix u = SolveForward(currManagement, false);
         //u.Show();
         norm = Norm(u[u.Rows - 1], y);
-
-        Console.WriteLine($"Current iteration: {iterations}, Norm: {norm}");
-
         Matrix psi = SolveBackwards(u, y);
         //psi.Show();
         Vector tmpManagement = new Vector(psi.Rows);
@@ -119,22 +138,42 @@ namespace ExtremalOptimization.Lab3
         {
           integralPointsU[i] = Alpha * Alpha * Beta * psi[i][psi[i].Size - 1] * (tmpManagement[i] - currManagement[i]);
         }
-
+        //Console.WriteLine(RectangleSquare(integralPointsU, StepsYLength));
         Vector intergalPointsL = new Vector(u[u.Rows - 1].Size);
         Matrix tmpU = SolveForward(tmpManagement, false);
         for (int i = 0; i < integralPointsU.Size; i++)
         {
           intergalPointsL[i] = Math.Pow(tmpU[tmpU.Rows - 1, i] - u[u.Rows - 1, i], 2);
         }
+        //Console.WriteLine(RectangleSquare(intergalPointsL, StepsXLength));
         double alpha = Math.Min(-0.5 * RectangleSquare(integralPointsU, StepsYLength) /
           RectangleSquare(intergalPointsL, StepsXLength), 1);
+
         for (int i = 0; i < currManagement.Size; i++)
         {
           currManagement[i] = currManagement[i] + alpha * (tmpManagement[i] - currManagement[i]);
         }
+        if (iterations % showEveryIteration == 0)
+        {
+          Console.WriteLine($"Current iteration: {iterations}, Norm: {norm}");
+          Console.WriteLine($"Step Alpha: {alpha}");
+        }
       }
       Matrix answerU = SolveForward(currManagement, false);
-      return answerU[answerU.Rows - 1];
+
+      ClearFile("../../Lab3/Results/trueSol.txt");
+      StreamWriter sw = new StreamWriter("../../Lab3/Results/trueSol.txt");
+      // Запмсываем в файл температуру при данном управлении
+      for (int i = 0; i < answerU.Rows; i++)
+      {
+        for (int j =0; j < answerU.Coloumns; j++)
+        {
+          sw.WriteLine(i * StepsYLength + " " + j * StepsYLength + " " + answerU[i, j]);
+        }
+      }
+
+      sw.Close();
+      return answerU;
     }
 
 

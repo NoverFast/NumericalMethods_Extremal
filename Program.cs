@@ -17,19 +17,20 @@ namespace ExtremalOptimization
      // aS.Solve();
       //Console.ReadLine(); 
       Console.WriteLine("Task 3");
-      RegularMesh rm1 = new RegularMesh(0, 1, 25);
-      RegularMesh rm2 = new RegularMesh(0, 1, 25);
+      RegularMesh rm1 = new RegularMesh(0, 1, 50);
+      RegularMesh rm2 = new RegularMesh(0, 1, 50);
       // НУ
-      Func<double, double> phi = (x => 100* x);
+      Func<double, double> phi = (x => 5 * x);
       // истинное управление
-      Func<double, double> exactManagement = (x => 1000 * x * x * (1 - x));
-      Func<double, double> appManagement = (x => 1000 * Math.Sin(10 * x));
-      SoutionBuilder sB = new SoutionBuilder(rm1, rm2, 2, 4, phi, exactManagement);
+      Func<double, double> exactManagement = (x => 25 * x * x );
+      Func<double, double> appManagement = (x => 80 * Math.Exp(x));
+      SoutionBuilder sB = new SoutionBuilder(rm1, rm2, 1, 1, phi, exactManagement);
       Matrix trueU = sB.SolveForward(new Vector(new double[] { }), true);
-      //trueU[trueU.Rows-1].Show();
-      SoutionBuilder sBAp = new SoutionBuilder(rm1, rm2, 2, 4, phi, appManagement);
-      Vector appY = sBAp.Solve(trueU[trueU.Rows - 1], 1e-3);
-      Console.ReadLine();
+      SoutionBuilder sBAp = new SoutionBuilder(rm1, rm2, 1, 1, phi, appManagement);
+      Matrix appU = sBAp.Solve(trueU[trueU.Rows - 1], 1e-5);
+
+      sBAp.WriteManagement(trueU[trueU.Rows - 1], "../../Lab3/Results/trueMan.txt");
+      sBAp.WriteManagement(appU[appU.Rows - 1], "../../Lab3/Results/appMan.txt");
     }
   }
 }

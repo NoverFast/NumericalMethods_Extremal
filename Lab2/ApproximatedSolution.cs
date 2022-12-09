@@ -105,11 +105,6 @@ namespace ExtremalOptimization.Lab2
 
     private void WriteToFile()
     {
-      //cd "D:/Projects/NumericalMethods_Extremal/Lab2/Results"
-      /*plot "CoordX.txt" using 1:2
-        replot "CoordY.txt" using 1:2
-        plot "ManX.txt"  using 1:2
-        replot "ManY.txt" using 1:2*/
       ClearFile("../../Lab2/Results/CoordX.txt");
       ClearFile("../../Lab2/Results/CoordY.txt");
       StreamWriter swX = new StreamWriter("../../Lab2/Results/CoordX.txt");
