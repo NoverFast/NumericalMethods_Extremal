@@ -1,4 +1,5 @@
-﻿using MathPrimitivesLibrary;
+﻿using ExtremalOptimization.Lab2;
+using MathPrimitivesLibrary;
 using MathPrimitivesLibrary.Types.Meshes;
 using System;
 using System.IO;
@@ -11,8 +12,8 @@ namespace ExtremalOptimization.Lab3
     public Func<double, double> ManagementFunc { get; set; }
     public Func<double, double> PhiFunc { get; set; }
 
-    private double pMin { get { return 0; } }
-    private double pMax { get { return 4000; } }
+    private double pMin { get { return -1000; } }
+    private double pMax { get { return 1000; } }
 
     public double Alpha { get; set; }
     public double Beta { get; set; }
@@ -57,6 +58,7 @@ namespace ExtremalOptimization.Lab3
       {
         StartManagement[i] = ManagementFunc(i * StepsYLength);
       }
+      WriteManagement(StartManagement, "../../Lab3/Results/startManagement.txt");
       Console.WriteLine($"Params: \nAlpha: {Alpha}, Beta: {Beta}" +
         $"\nNumber of steps by each direction: ({StepsX}, {StepsY})" +
         $"\nStep length by each direction: ({StepsXLength}, {StepsYLength})");
@@ -65,6 +67,18 @@ namespace ExtremalOptimization.Lab3
     private void ClearFile(string path)
     {
       File.WriteAllText(path, string.Empty);
+    }
+
+    private double Trapezoid(Vector vec, double step)
+    {
+      double sum = 0;
+      sum += vec[0] * StepsXLength / 2;
+      sum += vec[vec.Size - 1] * StepsXLength / 2;
+      for (int i = 1; i < vec.Size - 2; i++)
+      {
+        sum += vec[i] * StepsXLength;
+      }
+      return sum;
     }
     private double RectangleSquare(Vector vec, double step)
     {
@@ -100,7 +114,7 @@ namespace ExtremalOptimization.Lab3
       sw.Close();
     }
 
-    public Matrix Solve(Vector y, double precision, int showEveryIteration = 100)
+    public Matrix Solve(Vector y, double precision, int showEveryIteration = 500)
     {
       Vector currManagement = StartManagement;
       double norm = double.PositiveInfinity;
@@ -128,30 +142,34 @@ namespace ExtremalOptimization.Lab3
             tmpManagement[i] = pMax;
           }
         }
-
+        //tmpManagement.Show();
         Vector integralPointsU = new Vector(psi[0].Size);
         for (int i =0; i < integralPointsU.Size; i++)
         {
           integralPointsU[i] = Alpha * Alpha * Beta * psi[i][psi[i].Size - 1] * (tmpManagement[i] - currManagement[i]);
         }
+        //integralPointsU.Show();
         //Console.WriteLine(RectangleSquare(integralPointsU, StepsYLength));
         Vector intergalPointsL = new Vector(u[u.Rows - 1].Size);
         Matrix tmpU = SolveForward(tmpManagement, false);
         for (int i = 0; i < integralPointsU.Size; i++)
         {
           intergalPointsL[i] = Math.Pow(tmpU[tmpU.Rows - 1, i] - u[u.Rows - 1, i], 2);
+          //Console.WriteLine(Math.Pow(tmpU[tmpU.Rows - 1, i] - u[u.Rows - 1, i], 2));
         }
+        //intergalPointsL.Show();
         //Console.WriteLine(RectangleSquare(intergalPointsL, StepsXLength));
         double alpha = Math.Min(-0.5 * RectangleSquare(integralPointsU, StepsYLength) /
           RectangleSquare(intergalPointsL, StepsXLength), 1);
-
         for (int i = 0; i < currManagement.Size; i++)
         {
           currManagement[i] = currManagement[i] + alpha * (tmpManagement[i] - currManagement[i]);
         }
+        //Console.WriteLine("Current management:\n");
+        //currManagement.Show();
         if (iterations % showEveryIteration == 0)
         {
-          Console.WriteLine($"Current iteration: {iterations}, Norm: {norm}");
+          Console.WriteLine($"\nCurrent iteration: {iterations}, Norm: {norm}");
           Console.WriteLine($"Step Alpha: {alpha}");
         }
       }
