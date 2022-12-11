@@ -14,7 +14,8 @@ namespace ExtremalOptimization
     {
       Stopwatch sw = new Stopwatch();
       Console.WriteLine("Task 1");
-      IncorrectTask it = new IncorrectTask(4, 1);
+      IncorrectTask it = new IncorrectTask(10, 1);
+      it.Calculate();
       Console.ReadLine();
       Console.WriteLine("Task 2");
       RegularMesh rm = new RegularMesh(0, 1, 500);

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Runtime.ExceptionServices;
 using MathPrimitivesLibrary;
 using Microsoft.Win32;
@@ -44,7 +45,7 @@ namespace ExtremalOptimization.Lab1
       ApproximatedMatrix = AddNoise(ExpandedMatrix);
       ApproximatedCoefs = AddNoise(ExpandedCoefs);
 
-#if DEBUG
+#if abc
       Console.WriteLine("Исходная матрица и коэффициенты");
       SourceMatrix.Show();
       FreeCoefs.Show();
@@ -59,8 +60,15 @@ namespace ExtremalOptimization.Lab1
 #endif
       //test
     }
-
-    double LFunc()
+    public void Calculate()
+    {
+      SigmaAndH();
+      FindLambdaDelta();
+      FindSolution();
+      ExactSolution.Show();
+      Console.WriteLine($"Norm of exactl solution: {ExactSolution.Norm()}");
+    }
+    double LFunc(Vector u)
     {
       double buff0, buff1 = 0, buff2 = 0;
       for (int i =0; i <  ExpandedCoefs.Size; i++)
@@ -68,19 +76,19 @@ namespace ExtremalOptimization.Lab1
         buff0 = 0;
         for (int j = 0; j < FreeCoefs.Size; j++)
         {
-          buff0 += ApproximatedMatrix[i, j] * ExactSolution[j]; 
+          buff0 += ApproximatedMatrix[i, j] * u[j]; 
         }
         buff0 -= ApproximatedCoefs[i];
         buff1 += Math.Pow(buff0, 2);
       }
       for (int i =0; i < FreeCoefs.Size; i++)
       {
-        buff2 += Math.Pow(ExactSolution[i], 2);
+        buff2 += Math.Pow(u[i], 2);
       }
       return Math.Sqrt(buff1) + H * Math.Sqrt(buff2) + Sigma;
     }
 
-    private double dL(int k)
+    private double dL(Vector u, int k)
     {
       double buff0, buff1 = 0, buff2 = 0, buff3 = 0;
       for (int i = 0; i < ExpandedCoefs.Size; i++)
@@ -88,7 +96,7 @@ namespace ExtremalOptimization.Lab1
         buff0 = 0;
         for (int j =0; j < FreeCoefs.Size; j++)
         {
-          buff0 += ApproximatedMatrix[i, j] * ExactSolution[j];
+          buff0 += ApproximatedMatrix[i, j] * u[j];
         }
         buff0 -= ApproximatedCoefs[i];
         buff1 += ApproximatedMatrix[i, k] * buff0;
@@ -96,17 +104,17 @@ namespace ExtremalOptimization.Lab1
       }
       for (int i =0; i < FreeCoefs.Size; i++)
       {
-        buff3 += Math.Pow(ExactSolution[i], 2);
+        buff3 += Math.Pow(u[i], 2);
       }
       return buff1 / Math.Sqrt(buff2) + H * ExactSolution[k] / Math.Sqrt(buff3);
     }
 
-    private Vector gradL()
+    private Vector gradL(Vector u)
     {
       Vector gradient = new Vector(ExactSolution.Size);
       for (int i =0; i < gradient.Size; i++)
       {
-        gradient[i] = dL(i);
+        gradient[i] = dL(u, i);
       }
       return gradient; 
     }
@@ -167,12 +175,25 @@ namespace ExtremalOptimization.Lab1
 
     private void SigmaAndH()
     {
-      Matrix aTmp = SourceMatrix - ApproximatedMatrix;
-      Vector fTmp = FreeCoefs - ApproximatedCoefs;
-      H = 0;
+      Matrix aTmp = ExpandedMatrix - ApproximatedMatrix;
+      Vector fTmp = ExpandedCoefs - ApproximatedCoefs;
+      H = MatrixNorm(aTmp);
       Sigma = fTmp.Norm();
       Console.WriteLine($"H: {H}, | Sigma: {Sigma}");
 
+    }
+
+    private double MatrixNorm(Matrix a)
+    {
+      double sum = 0;
+      for (int i =0; i < a.Rows;i++)
+      {
+        for (int j =0; j < a.Coloumns;j++)
+        {
+          sum += Math.Pow(a[i, j], 2);
+        }
+      }
+      return Math.Sqrt(sum);
     }
 
     private Vector GradientDescent(Func<Vector, double> f, Func<Vector, Vector> gradF, Vector x0, double precision, int M )
@@ -186,7 +207,8 @@ namespace ExtremalOptimization.Lab1
         k += 1;
         Vector dd = gradF(xPrev) * tK;
         Vector dd2 = xPrev - dd;
-        x = dd2;
+        x = xPrev - gradF(xPrev) * tK;
+        Console.WriteLine(f(x) - f(xPrev));
         if (f(x) - f(xPrev) < 0)
         {
           Vector tmp = x - xPrev;
@@ -213,7 +235,7 @@ namespace ExtremalOptimization.Lab1
       {
         for (int j =0; j < noiseMatrix.Coloumns; j++)
         {
-          noiseMatrix[i, j] *= (1 + ((r.NextDouble() - 0.5) * 2) * 0.001);
+          noiseMatrix[i, j] *= (1 + ((r.NextDouble() - 0.5) * 2) * 0.0001);
         }
       }
       return noiseMatrix;
@@ -271,7 +293,7 @@ namespace ExtremalOptimization.Lab1
       Vector noiseVector = new Vector(v);
       for (int i = 0; i < noiseVector.Size; i++)
       {
-        noiseVector[i] *= (1 + ((r.NextDouble() - 0.5) * 2) * 0.01);
+        noiseVector[i] *= (1 + ((r.NextDouble() - 0.5) * 2) * 0.0001);
       }
       return noiseVector;
     }
