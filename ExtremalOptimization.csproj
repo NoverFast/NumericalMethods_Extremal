@@ -56,6 +56,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Lab1\Results\" />
     <Folder Include="Lab2\Results\" />
     <Folder Include="Lab3\Results\" />
   </ItemGroup>

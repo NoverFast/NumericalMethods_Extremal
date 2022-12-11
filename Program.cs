@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Text;
 using ExtremalOptimization.Lab1;
 using ExtremalOptimization.Lab2;
 using ExtremalOptimization.Lab3;
@@ -12,9 +13,10 @@ namespace ExtremalOptimization
   {
     static void Main(string[] args)
     {
+      Console.OutputEncoding = Encoding.UTF8;
       Stopwatch sw = new Stopwatch();
       Console.WriteLine("Task 1");
-      IncorrectTask it = new IncorrectTask(10, 1);
+      IncorrectTask it = new IncorrectTask(4, 30);
       it.Calculate();
       Console.ReadLine();
       Console.WriteLine("Task 2");

@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Globalization;
-using System.Runtime.ExceptionServices;
 using MathPrimitivesLibrary;
-using Microsoft.Win32;
+using System.IO;
 
 namespace ExtremalOptimization.Lab1
 {
@@ -16,6 +14,7 @@ namespace ExtremalOptimization.Lab1
     // Данные расширенной матрицы и столбца свободных членов
     public Matrix ExpandedMatrix { get; private set; }
     public Vector ExpandedCoefs { get; private set; }
+    public Vector ExpandedSolution { get; private set; }
 
     // Данные расширенной матрицы и столбца свободных членов с добавленным шумом
     public Matrix ApproximatedMatrix { get; private set; }
@@ -37,16 +36,49 @@ namespace ExtremalOptimization.Lab1
     {
       r = new Random(seed);
 
-      SourceMatrix = GenerateRandomMatrix(size);
+      SourceMatrix = new Matrix(new double[,] {
+        { 0.700976, 0.809676, 0.0887955, 0.121479},
+        { 0.348307, 0.421962, 0.699805, 0.0663843},
+        { 0.587482, 0.642966, 0.990603, 0.295718},
+        { 0.271337, 0.069656, 0.949639, 0.382175}
+      });
+      ExactSolution = new Vector(new double[] { 0.32271, 0.988366, 0.842522, 0.275314 });
+      FreeCoefs = new Vector(new double[] { 1.13473, 1.13733, 1.74109, 1.06172 });
+      //FreeCoefs = SourceMatrix * ExactSolution;
+
+      ExpandedMatrix = new Matrix(new double[,] {
+        { 0.700976, 0.809676, 0.0887955, 0.121479},
+        { 0.348307, 0.421962, 0.699805, 0.0663843},
+        { 0.587482, 0.642966, 0.990603, 0.295718},
+        { 0.271337, 0.069656, 0.949639, 0.382175},
+        { 0.972313, 0.879332, 1.03843, 0.503654 },
+        { 0.935789, 1.06493, 1.69041, 0.362103 }
+      });
+      ExpandedSolution = new Vector(new double[] { 0.32271, 0.988366, 0.842522, 0.275314, 0.598024, 1.83089 });
+      ExpandedCoefs = new Vector(new double[] { 1.13473, 1.13733, 1.74109, 1.06172, 2.19644, 2.87843 });
+
+      ApproximatedMatrix = new Matrix(new double[,] {
+        { 0.70099, 0.809685, 0.0888016, 0.121472},
+        { 0.348334, 0.421992, 0.69978, 0.0663791},
+        { 0.587499, 0.643005, 0.990674, 0.295732},
+        { 0.271321, 0.0696512, 0.949663, 0.382158},
+        { 0.972268, 0.87929, 1.03834, 0.503658 },
+        { 0.935881, 1.06502, 1.69046, 0.362137 }
+      });
+
+      ApproximatedCoefs = new Vector(new double[] { 1.1347, 1.13723, 1.74124, 1.06177, 2.19637, 2.87858 });
+
+      Console.WriteLine();
+      /*SourceMatrix = GenerateRandomMatrix(size);
       ExactSolution = GenerateRandomSolution(size);
       FreeCoefs = SourceMatrix * ExactSolution;
       ExpandedMatrix = GenerateExpandedMatrix(SourceMatrix);
       ExpandedCoefs = GenerateExpandedCoefs(FreeCoefs);
       ApproximatedMatrix = AddNoise(ExpandedMatrix);
-      ApproximatedCoefs = AddNoise(ExpandedCoefs);
+      ApproximatedCoefs = AddNoise(ExpandedCoefs);*/
 
-#if abc
-      Console.WriteLine("Исходная матрица и коэффициенты");
+#if DEBUG
+      /*Console.WriteLine("Исходная матрица и коэффициенты");
       SourceMatrix.Show();
       FreeCoefs.Show();
 
@@ -56,10 +88,15 @@ namespace ExtremalOptimization.Lab1
 
       Console.WriteLine("\nРасширенная матрица и коэффициенты с шумом");
       ApproximatedMatrix.Show();
-      ApproximatedCoefs.Show();
+      ApproximatedCoefs.Show(); */
 #endif
-      //test
     }
+
+    private void ClearFile(string path)
+    {
+      File.WriteAllText(path, string.Empty);
+    }
+
     public void Calculate()
     {
       SigmaAndH();
@@ -85,6 +122,9 @@ namespace ExtremalOptimization.Lab1
       {
         buff2 += Math.Pow(u[i], 2);
       }
+      //Console.WriteLine("---");
+      //Console.WriteLine(Math.Sqrt(buff1) + H * Math.Sqrt(buff2) + Sigma);
+      //Console.WriteLine("---");
       return Math.Sqrt(buff1) + H * Math.Sqrt(buff2) + Sigma;
     }
 
@@ -106,7 +146,7 @@ namespace ExtremalOptimization.Lab1
       {
         buff3 += Math.Pow(u[i], 2);
       }
-      return buff1 / Math.Sqrt(buff2) + H * ExactSolution[k] / Math.Sqrt(buff3);
+      return buff1 / Math.Sqrt(buff2) + H * u[k] / Math.Sqrt(buff3);
     }
 
     private Vector gradL(Vector u)
@@ -115,13 +155,15 @@ namespace ExtremalOptimization.Lab1
       for (int i =0; i < gradient.Size; i++)
       {
         gradient[i] = dL(u, i);
+        //Console.WriteLine(gradient[i]);
       }
       return gradient; 
     }
 
     private Vector CGM(Matrix A, Vector b, double precision)
     {
-      Vector xPrev = new Vector(ExpandedMatrix.Rows);
+      int n = A.Rows;
+      Vector xPrev = new Vector(n);
       Vector x = xPrev;
       Vector rPrev = b - A * xPrev;
       Vector r = rPrev;
@@ -130,8 +172,7 @@ namespace ExtremalOptimization.Lab1
       double error;
       do
       {
-        error = 0;
-        double alphaK = rPrev.DotProduct(rPrev) / (ApproximatedMatrix * zPrev).DotProduct(zPrev);
+        double alphaK = rPrev.DotProduct(rPrev) / (A * zPrev).DotProduct(zPrev);
         for (int i = 0; i < A.Rows; i++)
         {
           x[i] = xPrev[i] + alphaK * zPrev[i];
@@ -159,7 +200,7 @@ namespace ExtremalOptimization.Lab1
       for (int i =0; i < ApproximatedMatrix.Rows; i++)
       {
         buff0 = 0;
-        for (int j =0; j < SourceMatrix.Rows; i++)
+        for (int j =0; j < SourceMatrix.Rows; j++)
         {
           buff0 += ApproximatedMatrix[i, j] * v[j];
         }
@@ -179,7 +220,7 @@ namespace ExtremalOptimization.Lab1
       Vector fTmp = ExpandedCoefs - ApproximatedCoefs;
       H = MatrixNorm(aTmp);
       Sigma = fTmp.Norm();
-      Console.WriteLine($"H: {H}, | Sigma: {Sigma}");
+      Console.WriteLine($"\nH: {H}, | Sigma: {Sigma}");
 
     }
 
@@ -199,19 +240,32 @@ namespace ExtremalOptimization.Lab1
     private Vector GradientDescent(Func<Vector, double> f, Func<Vector, Vector> gradF, Vector x0, double precision, int M )
     {
       int k = 0;
-      Vector xPrev = x0;
-      Vector x = xPrev;
+      Vector xPrev = new Vector(x0);
+      Vector x = new Vector(xPrev.Size);
       double tK = 3;
+      //gradF(xPrev).Show();
       while (true)
       {
         k += 1;
-        Vector dd = gradF(xPrev) * tK;
-        Vector dd2 = xPrev - dd;
-        x = xPrev - gradF(xPrev) * tK;
-        Console.WriteLine(f(x) - f(xPrev));
+        Vector gradientX = new Vector(xPrev.Size);
+        gradientX = gradF(xPrev);
+        for (int i =0; i < gradientX.Size; i++)
+        {
+          gradientX[i] *= tK;
+        }
+        (xPrev - gradientX).CopyTo(x);
+        /*Console.WriteLine("\nxPrev:");
+        xPrev.Show();
+        Console.WriteLine("\ngradient:");
+        gradientX.Show();
+        Console.WriteLine("\nx:");
+        x.Show();
+        Console.WriteLine("\nf(x): {0}", f(x));
+        Console.WriteLine("f(xPrev): {0}", f(xPrev));*/
         if (f(x) - f(xPrev) < 0)
         {
           Vector tmp = x - xPrev;
+          //tmp.Show();
           if (tmp.Norm() <= precision || k + 1 > M)
           {
             return x;
@@ -221,7 +275,7 @@ namespace ExtremalOptimization.Lab1
         {
           tK /= 2;
         }
-        for (int i =0; i < SourceMatrix.Rows; i++)
+        for (int i =0; i < xPrev.Size; i++)
         {
           xPrev[i] = x[i];
         }
@@ -244,8 +298,11 @@ namespace ExtremalOptimization.Lab1
     private void FindLambdaDelta()
     {
       Vector x0 = new Vector(ExactSolution);
+      Console.WriteLine("x0");
+      x0.Show();
       Vector LMin = GradientDescent(LFunc, gradL, x0, 1e-6, 1000);
       LambdaDelta = LFunc(LMin);
+      Console.WriteLine("\nLMin");
       LMin.Show();
       Console.Write($"\nLambda Delta: {LambdaDelta}");
     }
@@ -255,10 +312,12 @@ namespace ExtremalOptimization.Lab1
       Matrix matrix = ApproximatedMatrix.Transpose() * ApproximatedMatrix + SourceMatrix.IdentityMatrix * alpha;
       Vector vector = ApproximatedMatrix.Transpose() * ApproximatedCoefs;
       Vector answer = CGM(matrix, vector, 1e-6);
+
       matrix.Show();
       vector.Show();
-      // вывод в файл
-      //
+
+      ClearFile("../../Lab1/Results/rho.txt");
+      StreamWriter rho = new StreamWriter("../../Lab1/Results/rho.txt");
       double val = FindRho(answer);
 
       double needAlpha = 0;
@@ -271,19 +330,20 @@ namespace ExtremalOptimization.Lab1
         vector = ApproximatedMatrix.Transpose() * ApproximatedCoefs;
         answer = CGM(matrix, vector, 1e-6);
         val = FindRho(answer);
+        //Console.WriteLine(alpha + " " + val);
         if (alpha <= 0.25)
         {
-          //запись в файл
+          rho.WriteLine(alpha + " " + val);
         }
-        if (Math.Abs(val) < 1e-4 && alpha >= 0)
+        if (val < 1e-4 && alpha >= 0)
         {
           needAlpha = alpha;
           needValue = val;
           needAnswer = answer;
         }
       }
-      // закрыть файл
-      Console.WriteLine($"Value: {needValue}");
+      rho.Close();
+      Console.WriteLine($"\nValue: {needValue}");
       Console.WriteLine($"Alpha: {needAlpha}");
       needAnswer.Show();
       Console.WriteLine($"\nAnswer Norm: {needAnswer.Norm()}");
@@ -305,7 +365,7 @@ namespace ExtremalOptimization.Lab1
       {
         for (int j =0; j < m.Coloumns; j++)
         {
-          randomValue = (r.NextDouble() - 0.5) * 2;
+          randomValue = Math.Abs((r.NextDouble() - 0.5) * 2);
           m[i, j] = randomValue;
         }
       }
@@ -316,7 +376,7 @@ namespace ExtremalOptimization.Lab1
       Vector v = new Vector(size);
       for (int i =0; i < v.Size; i++)
       {
-        v[i] = (r.NextDouble() - 0.5) * 2;
+        v[i] = Math.Abs((r.NextDouble() - 0.5) * 2);
       }
       return v;
     }
