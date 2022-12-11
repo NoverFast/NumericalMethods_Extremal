@@ -36,7 +36,7 @@ namespace ExtremalOptimization.Lab1
     {
       r = new Random(seed);
 
-      SourceMatrix = new Matrix(new double[,] {
+      /*SourceMatrix = new Matrix(new double[,] {
         { 0.700976, 0.809676, 0.0887955, 0.121479},
         { 0.348307, 0.421962, 0.699805, 0.0663843},
         { 0.587482, 0.642966, 0.990603, 0.295718},
@@ -68,27 +68,27 @@ namespace ExtremalOptimization.Lab1
 
       ApproximatedCoefs = new Vector(new double[] { 1.1347, 1.13723, 1.74124, 1.06177, 2.19637, 2.87858 });
 
-      Console.WriteLine();
-      /*SourceMatrix = GenerateRandomMatrix(size);
+      Console.WriteLine(); */
+      SourceMatrix = GenerateRandomMatrix(size);
       ExactSolution = GenerateRandomSolution(size);
       FreeCoefs = SourceMatrix * ExactSolution;
       ExpandedMatrix = GenerateExpandedMatrix(SourceMatrix);
       ExpandedCoefs = GenerateExpandedCoefs(FreeCoefs);
-      ApproximatedMatrix = AddNoise(ExpandedMatrix);
-      ApproximatedCoefs = AddNoise(ExpandedCoefs);*/
+      ApproximatedMatrix = AddNoise(ExpandedMatrix, 1e-5);
+      ApproximatedCoefs = AddNoise(ExpandedCoefs, 1e-5);
 
 #if DEBUG
-      /*Console.WriteLine("Исходная матрица и коэффициенты");
+      Console.WriteLine("\n\tSource Matrix | Coeffs");
       SourceMatrix.Show();
       FreeCoefs.Show();
 
-      Console.WriteLine("\nРасширенная матрица и коэффициенты без шума");
+      Console.WriteLine("\n\tExpanded Matrix | Expanded Coeffs");
       ExpandedMatrix.Show();
       ExpandedCoefs.Show();
 
-      Console.WriteLine("\nРасширенная матрица и коэффициенты с шумом");
+      Console.WriteLine("\n\tExpanded Matrix (With Noise) | Expanded Coeffs (Without Noise)");
       ApproximatedMatrix.Show();
-      ApproximatedCoefs.Show(); */
+      ApproximatedCoefs.Show(); 
 #endif
     }
 
@@ -102,8 +102,6 @@ namespace ExtremalOptimization.Lab1
       SigmaAndH();
       FindLambdaDelta();
       FindSolution();
-      ExactSolution.Show();
-      Console.WriteLine($"Norm of exactl solution: {ExactSolution.Norm()}");
     }
     double LFunc(Vector u)
     {
@@ -164,11 +162,14 @@ namespace ExtremalOptimization.Lab1
     {
       int n = A.Rows;
       Vector xPrev = new Vector(n);
-      Vector x = xPrev;
+      Vector x = new Vector(xPrev.Size);
       Vector rPrev = b - A * xPrev;
-      Vector r = rPrev;
-      Vector zPrev = rPrev;
-      Vector z = zPrev;
+
+      Vector r = new Vector(rPrev.Size);
+      rPrev.CopyTo(r);
+      Vector zPrev = new Vector(rPrev.Size);
+      rPrev.CopyTo(zPrev);
+      Vector z = new Vector(zPrev.Size);
       double error;
       do
       {
@@ -216,11 +217,12 @@ namespace ExtremalOptimization.Lab1
 
     private void SigmaAndH()
     {
+      Console.WriteLine("\t--- Sigma | H ---");
       Matrix aTmp = ExpandedMatrix - ApproximatedMatrix;
       Vector fTmp = ExpandedCoefs - ApproximatedCoefs;
       H = MatrixNorm(aTmp);
       Sigma = fTmp.Norm();
-      Console.WriteLine($"\nH: {H}, | Sigma: {Sigma}");
+      Console.WriteLine($"H: {H}, | Sigma: {Sigma}");
 
     }
 
@@ -282,39 +284,25 @@ namespace ExtremalOptimization.Lab1
       }
     }
 
-    private Matrix AddNoise(Matrix m)
-    {
-      Matrix noiseMatrix = new Matrix(m);
-      for (int i =0; i < noiseMatrix.Rows; i++)
-      {
-        for (int j =0; j < noiseMatrix.Coloumns; j++)
-        {
-          noiseMatrix[i, j] *= (1 + ((r.NextDouble() - 0.5) * 2) * 0.0001);
-        }
-      }
-      return noiseMatrix;
-    }
-
     private void FindLambdaDelta()
     {
+      Console.WriteLine("\t--- Lambda-Delta ---");
       Vector x0 = new Vector(ExactSolution);
-      Console.WriteLine("x0");
+      Console.WriteLine("x0: ");
       x0.Show();
       Vector LMin = GradientDescent(LFunc, gradL, x0, 1e-6, 1000);
       LambdaDelta = LFunc(LMin);
-      Console.WriteLine("\nLMin");
+      Console.WriteLine("\nLMin: ");
       LMin.Show();
-      Console.Write($"\nLambda Delta: {LambdaDelta}");
+      Console.WriteLine($"\nLambda Delta: {LambdaDelta}");
     }
     private void FindSolution()
     {
+      Console.WriteLine("\t--- Solution ---");
       double alpha = 1;
       Matrix matrix = ApproximatedMatrix.Transpose() * ApproximatedMatrix + SourceMatrix.IdentityMatrix * alpha;
       Vector vector = ApproximatedMatrix.Transpose() * ApproximatedCoefs;
       Vector answer = CGM(matrix, vector, 1e-6);
-
-      matrix.Show();
-      vector.Show();
 
       ClearFile("../../Lab1/Results/rho.txt");
       StreamWriter rho = new StreamWriter("../../Lab1/Results/rho.txt");
@@ -345,15 +333,33 @@ namespace ExtremalOptimization.Lab1
       rho.Close();
       Console.WriteLine($"\nValue: {needValue}");
       Console.WriteLine($"Alpha: {needAlpha}");
+      Console.WriteLine("Approximated Solution: ");
       needAnswer.Show();
       Console.WriteLine($"\nAnswer Norm: {needAnswer.Norm()}");
+      Console.WriteLine("\nExact Solution: ");
+      ExactSolution.Show();
+      Console.WriteLine($"\nExact Solution Norm: {ExactSolution.Norm()}");
+      Console.WriteLine($"Norm Difference: {needAnswer.Norm() - ExactSolution.Norm()}");
     }
-    private Vector AddNoise(Vector v)
+
+    private Matrix AddNoise(Matrix m, double prec)
+    {
+      Matrix noiseMatrix = new Matrix(m);
+      for (int i = 0; i < noiseMatrix.Rows; i++)
+      {
+        for (int j = 0; j < noiseMatrix.Coloumns; j++)
+        {
+          noiseMatrix[i, j] *= (1 + ((r.NextDouble() - 0.5) * 2) * prec);
+        }
+      }
+      return noiseMatrix;
+    }
+    private Vector AddNoise(Vector v, double prec)
     {
       Vector noiseVector = new Vector(v);
       for (int i = 0; i < noiseVector.Size; i++)
       {
-        noiseVector[i] *= (1 + ((r.NextDouble() - 0.5) * 2) * 0.0001);
+        noiseVector[i] *= (1 + ((r.NextDouble() - 0.5) * 2) * prec);
       }
       return noiseVector;
     }
